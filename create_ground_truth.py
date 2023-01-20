@@ -65,8 +65,9 @@ def create_GT_masks(root_dir, background_dir, intrinsic_matrix,classes):
         classes (dict) : dictionary containing classes and their ids
         Saves the masks to their respective directories
     """
-    list_all_images = load_obj(root_dir + "all_images_adr")
-    training_images_idx = load_obj(root_dir + "train_images_indices")
+    list_all_images = load_obj(root_dir + "all_images_adr") # 모든 image들의 주소
+    training_images_idx = load_obj(root_dir + "train_images_indices") # dataset에서 color image number
+    
     for i in range(len(training_images_idx)):
         img_adr = list_all_images[training_images_idx[i]]
         label = os.path.split(os.path.split(os.path.dirname(img_adr))[0])[1]
@@ -76,8 +77,18 @@ def create_GT_masks(root_dir, background_dir, intrinsic_matrix,classes):
         if i % 1000 == 0:
             print(str(i) + "/" + str(len(training_images_idx)) + " finished!")
 
+        # image 불러옴
         image = cv2.imread(img_adr)
-        ID_mask = np.zeros((image.shape[0], image.shape[1]))
+        # image.shape 
+        
+        # image shape 출력해보기
+        num=0
+        if num==0:
+            print('height: ',image.shape[0])
+            print('width:', image.shape[1])
+        num+=1
+        # image와 동일한 사이즈로 만들어두기
+        ID_mask = np.zeros((image.shape[0], image.shape[1])) # height, width
         U_mask = np.zeros((image.shape[0], image.shape[1]))
         V_mask = np.zeros((image.shape[0], image.shape[1]))
 
@@ -88,23 +99,27 @@ def create_GT_masks(root_dir, background_dir, intrinsic_matrix,classes):
         V_mask_file = root_dir + label + \
             "/ground_truth/Vmasks/color" + str(idx) + ".png"
 
-        tra_adr = root_dir + label + "/data/tra" + str(idx) + ".tra"
-        rot_adr = root_dir + label + "/data/rot" + str(idx) + ".rot"
+        tra_adr = root_dir + label + "/data/tra" + str(idx) + ".tra" # 각 이미지의 translation 정보
+        rot_adr = root_dir + label + "/data/rot" + str(idx) + ".rot" # 각 이미지의 rotation 정보
+        # translation과 rotation 정보 -> transformation matrix 생성 (rigid transformation)
         rigid_transformation = get_rot_tra(rot_adr, tra_adr)
 
         # Read point Point Cloud Data
+        # 3차원 model의 표면에 있는 점들의 집합
         ptcld_file = root_dir + label + "/object.xyz"
         pt_cld_data = np.loadtxt(ptcld_file, skiprows=1, usecols=(0, 1, 2))
         ones = np.ones((pt_cld_data.shape[0], 1))
+        
+        # homogenous_coordinate: 동차좌표계  (x,y)를 (x,y,1)로 표현하는 것  
         homogenous_coordinate = np.append(pt_cld_data[:, :3], ones, axis=1)
 
         # Perspective Projection to obtain 2D coordinates for masks
-        homogenous_2D = intrinsic_matrix @ (
+        homogenous_2D = intrinsic_matrix @ (                # @는 내적?
             rigid_transformation @ homogenous_coordinate.T)
         coord_2D = homogenous_2D[:2, :] / homogenous_2D[2, :]
         coord_2D = ((np.floor(coord_2D)).T).astype(int)
-        x_2d = np.clip(coord_2D[:, 0], 0, 639)
-        y_2d = np.clip(coord_2D[:, 1], 0, 479)
+        x_2d = np.clip(coord_2D[:, 0], 0, 639)  # np.clip(value_array, min, max) 전달받은 숫자가 최소, 최대값 사이의 값인지 확인
+        y_2d = np.clip(coord_2D[:, 1], 0, 479)  
         ID_mask[y_2d, x_2d] = classes[label]
 
         if i % 100 != 0:  # change background for every 99/100 images

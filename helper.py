@@ -90,4 +90,3 @@ def ADD_score(pt_cld, true_pose, pred_pose, diameter):
         return 0
 
 
-

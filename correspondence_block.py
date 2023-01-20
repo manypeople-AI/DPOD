@@ -18,7 +18,7 @@ def train_correspondence_block(root_dir, classes, epochs=10):
                                 transform=transforms.Compose([transforms.ToTensor(),
                                 transforms.ColorJitter(brightness=0, contrast=0, saturation=0, hue=0)]))
 
-    batch_size = 4
+    batch_size = 2
     num_workers = 0
     valid_size = 0.2
     # obtain training indices that will be used for validation
@@ -104,9 +104,19 @@ def train_correspondence_block(root_dir, classes, epochs=10):
             loss_v = criterion_v(vmask_pred, vmask)
             loss = loss_id + loss_u + loss_v
             # update average validation loss
+            # validataion loss 부분 다시 보기
             valid_loss += loss.item()
 
+        print("check why loss is nan")
         # calculate average losses
+        print("train_loss")
+        print(train_loss)
+        print("valid_loss")
+        print(valid_loss)
+        print("len(train_loader.sampler")
+        print(len(train_loader.sampler))
+        print("len(valid_loader.sampler)")
+        print(len(valid_loader.sampler))
         train_loss = train_loss/len(train_loader.sampler)
         valid_loss = valid_loss/len(valid_loader.sampler)
 

@@ -66,7 +66,7 @@ def train_pose_refinement(root_dir, classes, epochs=5):
     # freeze resnet
     # pose_refiner.feature_extractor[0].weight.requires_grad = False
 
-    batch_size = 4
+    batch_size = 2
     num_workers = 0
     valid_size = 0.2
     # obtain training indices that will be used for validation
@@ -143,15 +143,20 @@ def train_pose_refinement(root_dir, classes, epochs=5):
         for label, image, rendered, true_pose, pred_pose in valid_loader:
             # move tensors to GPU
             image, rendered = image.cuda(), rendered.cuda()
+            # print(image.shape) #4,3,224,224 맨앞은 batch size 4로 하면 size mismatch 뜸 아 맨앞에 batch size랑 동일하게 해줘야 하나보다!
+            # print(rendered.shape)
+            
+            
             # forward pass: compute predicted outputs by passing inputs to the model
             xy, z, rot = pose_refiner(image, rendered, pred_pose, batch_size)
             rot[torch.isnan(rot)] = 1  # take care of NaN and inf values
-            rot[rot == float("Inf")] = 1            
+            rot[rot == float("Inf")] = 1
             xy[torch.isnan(xy)] == 0
             z[torch.isnan(z)] == 0
             # convert R quarternion to rotational matrix
             rot = torch.tensor(
                 (R.from_quat(rot.detach().cpu().numpy())).as_matrix())
+            
             # update predicted pose
             pred_pose[:, 0:3, 0:3] = rot
             pred_pose[:, 0, 3] = xy[:, 0]
